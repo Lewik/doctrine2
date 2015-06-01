@@ -727,7 +727,7 @@ public function __construct()
             // don't generate method if its already on the base class.
             $reflClass = new \ReflectionClass($this->getClassToExtend());
 
-            if ($reflClass->hasMethod($method)) {
+            if ($reflClass->hasMethod($method) && !$reflClass->getMethod($method)->isAbstract() && !$reflClass->getMethod($method)->isPrivate()) {
                 return true;
             }
         }
