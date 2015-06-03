@@ -255,6 +255,7 @@ public function <methodName>(<methodTypeHint>$<variableName><variableDefault>)
  */
 public function <methodName>(<methodTypeHint>$<variableName>)
 {
+<spaces><inverseSetter>
 <spaces>$this-><fieldName>[] = $<variableName>;
 
 <spaces>return $this;
@@ -271,6 +272,7 @@ public function <methodName>(<methodTypeHint>$<variableName>)
  */
 public function <methodName>(<methodTypeHint>$<variableName>)
 {
+<spaces><inverseRemover>
 <spaces>$this-><fieldName>->removeElement($<variableName>);
 }';
 
@@ -1121,7 +1123,9 @@ public function __construct()
           '<methodName>'        => $methodName,
           '<fieldName>'         => $fieldName,
           '<variableDefault>'   => ($defaultValue !== null ) ? (' = '.$defaultValue) : '',
-          '<entity>'            => $this->getClassName($metadata)
+          '<entity>'            => $this->getClassName($metadata),
+          '<inverseSetter>'     => $this->generateInverseSetter($metadata, $type, $fieldName),
+          '<inverseRemover>'    => $this->generateInverseRemover($metadata, $type, $fieldName)
         );
 
         $method = str_replace(
@@ -1131,6 +1135,52 @@ public function __construct()
         );
 
         return $this->prefixCodeWithSpaces($method);
+    }
+
+
+    /**
+     * @param ClassMetadataInfo $metadata
+     * @param $type
+     * @param $fieldName
+     * @throws \Doctrine\ORM\Mapping\MappingException
+     *
+     * @return string
+     */
+    protected function generateInverseSetter(ClassMetadataInfo $metadata, $type, $fieldName)
+    {
+        $inverseSetter = '';
+        if ($type == "add" && $metadata->hasAssociation($fieldName)) {
+            $associationMapping = $metadata->getAssociationMapping($fieldName);
+            if (!$associationMapping['isOwningSide']) {
+                $setterMethodName = $associationMapping['type'] == ClassMetadataInfo::MANY_TO_MANY ? 'add' : 'set';
+                $setterMethodName .= Inflector::classify($associationMapping['mappedBy']);
+                $inverseSetter = '$' . Inflector::camelize($fieldName) . '->' . $setterMethodName . '($this);';
+            }
+        }
+        return $inverseSetter;
+    }
+
+    /**
+     * @param ClassMetadataInfo $metadata
+     * @param $type
+     * @param $fieldName
+     * @throws \Doctrine\ORM\Mapping\MappingException
+     *
+     * @return string
+     */
+    protected function generateInverseRemover(ClassMetadataInfo $metadata, $type, $fieldName)
+    {
+        $inverseSetter = '';
+        if ($type == "remove" && $metadata->hasAssociation($fieldName)) {
+            $associationMapping = $metadata->getAssociationMapping($fieldName);
+            if (!$associationMapping['isOwningSide']) {
+                $setterMethodName = $associationMapping['type'] == ClassMetadataInfo::MANY_TO_MANY ? 'remove' : 'set';
+                $setterMethodName .= Inflector::classify($associationMapping['mappedBy']);
+                $argument = $associationMapping['type'] == ClassMetadataInfo::MANY_TO_MANY ? '$this' : 'null';
+                $inverseSetter = '$' . Inflector::camelize($fieldName) . '->' . $setterMethodName . '(' . $argument . ');';
+            }
+        }
+        return $inverseSetter;
     }
 
     /**

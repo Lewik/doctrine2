@@ -454,6 +454,72 @@ class EntityGeneratorTest extends \Doctrine\Tests\OrmTestCase
         $this->assertEquals($value, $entity->{$getter}());
     }
 
+    public function testGenerateInverseSetterOneToMany()
+    {
+        $metadata = new ClassMetadataInfo($this->_namespace . '\EntityType');
+        $metadata->namespace = $this->_namespace;
+        $metadata->table['name'] = 'entity_type';
+        $mappingData = array(
+            'columnName' => 'test_one_to_many',
+            'fieldName' => 'test_one_to_many',
+            'type' => 'one-to-many',
+            'targetEntity' => $this->_namespace . '\EntityType',
+            'mappedBy' => 'mapped_test_one_to_many',
+        );
+        $metadata->mapOneToMany($mappingData);
+        $inverseSetter = $this->invokeMethod($this->_generator, 'generateInverseSetter', array($metadata, 'add', 'test_one_to_many'));
+        $this->assertEquals('$testOneToMany->setMappedTestOneToMany($this);', $inverseSetter);
+    }
+
+    public function testGenerateInverseSetterManyToOne()
+    {
+        $metadata = new ClassMetadataInfo($this->_namespace . '\EntityType');
+        $metadata->namespace = $this->_namespace;
+        $metadata->table['name'] = 'entity_type';
+        $mappingData = array(
+            'columnName' => 'test_many_to_one',
+            'fieldName' => 'test_many_to_one',
+            'type' => 'many-to-one',
+            'targetEntity' => $this->_namespace . '\EntityType',
+            'inversedBy' => 'mapped_test_many_to_one',
+        );
+        $metadata->mapManyToOne($mappingData);
+        $inverseSetter = $this->invokeMethod($this->_generator, 'generateInverseSetter', array($metadata, 'add', 'test_many_to_one'));
+        $this->assertEquals('', $inverseSetter);
+    }
+
+    public function testGenerateInverseSetterManyToMany()
+    {
+        $metadata = new ClassMetadataInfo($this->_namespace . '\EntityType');
+        $metadata->namespace = $this->_namespace;
+        $metadata->table['name'] = 'entity_type';
+        $mappingData = array(
+            'columnName' => 'test_many_to_many',
+            'fieldName' => 'test_many_to_many',
+            'type' => 'one-to-many',
+            'targetEntity' => $this->_namespace . '\EntityType',
+            'mappedBy' => 'mapped1_test_many_to_many',
+            'inversedBy' => 'mapped2_test_one_to_many',
+        );
+        $metadata->mapManyToMany($mappingData);
+        $inverseSetter = $this->invokeMethod($this->_generator, 'generateInverseSetter', array($metadata, 'add', 'test_many_to_many'));
+        $this->assertEquals('$testManyToMany->addMapped1TestManyToMany($this);', $inverseSetter);
+    }
+
+    /**
+     * @param $object
+     * @param string $methodName
+     * @param array $args
+     * @return \ReflectionMethod
+     */
+    protected function invokeMethod($object, $methodName, array $args = array())
+    {
+        $class = new \ReflectionObject($object);
+        $method = $class->getMethod($methodName);
+        $method->setAccessible(true);
+        return $method->invokeArgs($object, $args);
+    }
+
     /**
      * @return array
      */
